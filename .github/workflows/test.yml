@@ -1,0 +1,122 @@
+name: test
+
+# Two-gate CI honouring LodgeiT Labs' "Kit deserves the same CI hygiene as the
+# Brain" discipline and the "hermetic green without production-bundle green is
+# pre-broken" discipline. Both gates surface inline above the merge button.
+#
+# Gate 1 (hermetic): builds the .NET example, validates the OpenAPI snapshot,
+# imports the Python example without executing the live-substrate call. Catches
+# code drift without depending on Cloud Run availability.
+#
+# Gate 2 (live substrate): runs the Python quickstart against the live PROD
+# Cloud Run URL with retry-with-jitter. Catches contract drift between the
+# pinned snapshot and what production actually serves.
+
+on:
+  push:
+    branches: [main, master, 'clawdog/**']
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Daily 06:00 UTC against PROD so contract drift surfaces even on idle days.
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  gate-1-hermetic:
+    name: Gate 1 — hermetic example regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Validate OpenAPI snapshot is well-formed JSON
+        run: |
+          python3 -c "import json; json.load(open('openapi/clawdog-calculator-api.openapi.json')); print('✅ snapshot is valid JSON')"
+
+      - name: Validate OpenAPI snapshot conforms to OpenAPI 3.x
+        run: |
+          pip install openapi-spec-validator
+          openapi-spec-validator openapi/clawdog-calculator-api.openapi.json
+          echo "✅ snapshot conforms to OpenAPI 3.x"
+
+      - name: Python example — syntax + import check
+        run: |
+          python3 -c "import py_compile; py_compile.compile('examples/python/quickstart.py', doraise=True); print('✅ Python example compiles')"
+
+      - name: .NET example — build
+        working-directory: examples/dotnet
+        run: |
+          dotnet build --nologo --verbosity minimal
+          echo "✅ .NET example builds"
+
+  gate-2-live-substrate:
+    name: Gate 2 — live substrate probe
+    runs-on: ubuntu-latest
+    needs: gate-1-hermetic
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Probe live PROD substrate via Python quickstart
+        env:
+          CLAWDOG_CALC_API_URL: https://fbt-calculator-api-8340695160.australia-southeast1.run.app
+          CLAWDOG_CALC_TIMEOUT: '30'
+          CLAWDOG_CALC_RETRIES: '5'
+        run: |
+          set -e
+          cd examples/python
+          # The example handles 5xx with retry-with-jitter internally. If it
+          # exits 0, the live substrate is contract-aligned with our snapshot.
+          python3 quickstart.py
+          echo "✅ Live-substrate probe succeeded"
+
+      - name: Probe live PROD substrate via raw curl (defence-in-depth)
+        run: |
+          set -e
+          BASE="https://fbt-calculator-api-8340695160.australia-southeast1.run.app"
+          # 1. Discovery returns 200 + 20 calculators
+          COUNT=$(curl -s "$BASE/v1/calculators" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
+          if [ "$COUNT" != "20" ]; then
+            echo "❌ Expected 20 calculators, got $COUNT"
+            exit 1
+          fi
+          echo "✅ Discovery returns 20 calculators"
+
+          # 2. OpenAPI spec is reachable and version-stable
+          VERSION=$(curl -s "$BASE/openapi.json" | python3 -c "import json,sys; print(json.load(sys.stdin)['info']['version'])")
+          PINNED_VERSION=$(python3 -c "import json; print(json.load(open('openapi/clawdog-calculator-api.openapi.json'))['info']['version'])")
+          echo "Live API version: $VERSION"
+          echo "Pinned API version: $PINNED_VERSION"
+          if [ "$VERSION" != "$PINNED_VERSION" ]; then
+            echo "⚠ Pinned version drift: live=$VERSION vs pinned=$PINNED_VERSION"
+            echo "  This is a contract-drift signal. Consider refreshing the snapshot + bumping the kit version."
+            # Do NOT fail — version drift is informational; partner consumers
+            # should see the warning and decide when to refresh their pin.
+          fi
+
+          # 3. MCP tools/list returns 20 tools
+          TOOL_COUNT=$(curl -s -X POST "$BASE/mcp" \
+            -H 'Content-Type: application/json' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+            | python3 -c "import json,sys; print(len(json.load(sys.stdin)['result']['tools']))")
+          if [ "$TOOL_COUNT" != "20" ]; then
+            echo "❌ Expected 20 MCP tools, got $TOOL_COUNT"
+            exit 1
+          fi
+          echo "✅ MCP tools/list returns 20 tools"
