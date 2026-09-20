@@ -72,6 +72,10 @@ Output: a discover-then-invoke walkthrough that calls FBT Car-Operating-Cost on 
 
 The .NET equivalent (`examples/dotnet/`) does the same with `HttpClient` + `System.Text.Json` against .NET 8.
 
+### Selecting a calculator
+
+Pick in three steps. Module (fbt, div7a or depreciation). Benefit type is a fact — establish it from what actually happened, testing the specific FBT types in resolution order (car, debt waiver, loan, expense payment, housing, LAFHA, board, meal entertainment, tax-exempt body entertainment, car parking, property) before residual, which is defined by exclusion. Method: where a benefit type has more than one valuation method the selection.kind is election or statutory_default — the method is the employer's choice, not yours. Compute every method in the group the records support, present them side by side with the election provision, and let the employer choose. Never pick the method for them.
+
 ---
 
 ## What's in the box
