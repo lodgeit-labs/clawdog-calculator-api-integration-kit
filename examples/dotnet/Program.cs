@@ -138,6 +138,10 @@ catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode statusCode
     );
 }
 
+// ---- Step 3: Module discovery + ?module= filtering (see DiscoverModules.cs) ----
+Console.WriteLine();
+await DiscoverModules.RunAsync(http);
+
 Console.WriteLine("\n=== Done ===");
 return 0;
 
