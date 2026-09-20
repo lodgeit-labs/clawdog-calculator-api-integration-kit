@@ -9,6 +9,7 @@
 // so `dotnet run` executes both. Kept as a static class (not top-level
 // statements) so it coexists with Program.cs's entry point in one project.
 
+using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 
 internal static class DiscoverModules
