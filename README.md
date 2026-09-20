@@ -1,6 +1,6 @@
 # ClawDog Calculator-API Integration Kit
 
-> Integration kit for the [ClawDog Calculator-Constellation REST API][api] — discover and invoke 20 SBRM-vocabulary calculators (Australian Fringe Benefits Tax, Depreciation) from any HTTP/JSON-RPC client.
+> Integration kit for the [ClawDog Calculator-Constellation REST API][api] — discover and invoke 22 SBRM-vocabulary calculators (Australian Fringe Benefits Tax, Depreciation) from any HTTP/JSON-RPC client.
 
 [api]: https://fbt-calculator-api-8340695160.australia-southeast1.run.app/openapi.json
 
@@ -37,7 +37,7 @@ The Calculator Constellation is the first public-facing surface of that operatin
 
 Both surfaces speak the same input/output schema. Pick whichever fits your stack.
 
-There are 20 calculators in the constellation today. See [`docs/CONTRACT.md`](docs/CONTRACT.md) for the full URN list with statute-of-record citations.
+There are 22 calculators in the constellation today. See [`docs/CONTRACT.md`](docs/CONTRACT.md) for the full URN list with statute-of-record citations.
 
 ---
 
@@ -49,7 +49,7 @@ There are 20 calculators in the constellation today. See [`docs/CONTRACT.md`](do
 curl -s https://fbt-calculator-api-8340695160.australia-southeast1.run.app/v1/calculators | head -200
 ```
 
-You should see a JSON array of 20 calculator descriptors. Each has a `calc_uri` (the URN), a `label`, a `method` slug, a list of `supported_periods` (period URNs are **domain-prefixed**, e.g. `urn:sbrm:period:fbt:fy2026`), an `input_schema_ref` pointer into the OpenAPI spec, and a `jurisdiction` tag.
+You should see a JSON array of 22 calculator descriptors. Each has a `calc_uri` (the URN), a `label`, a `method` slug, a list of `supported_periods` (period URNs are **domain-prefixed**, e.g. `urn:sbrm:period:fbt:fy2026`), an `input_schema_ref` pointer into the OpenAPI spec, and a `jurisdiction` tag.
 
 ### 2. Inspect the contract
 
@@ -71,6 +71,10 @@ python3 quickstart.py
 Output: a discover-then-invoke walkthrough that calls FBT Car-Operating-Cost on a canonical fixture and prints the taxable value + advisory block. ~30 lines of stdlib-only Python, no dependencies.
 
 The .NET equivalent (`examples/dotnet/`) does the same with `HttpClient` + `System.Text.Json` against .NET 8.
+
+### Selecting a calculator
+
+Pick in three steps. Module (fbt, div7a or depreciation). Benefit type is a fact — establish it from what actually happened, testing the specific FBT types in resolution order (car, debt waiver, loan, expense payment, housing, LAFHA, board, meal entertainment, tax-exempt body entertainment, car parking, property) before residual, which is defined by exclusion. Method: where a benefit type has more than one valuation method the selection.kind is election or statutory_default — the method is the employer's choice, not yours. Compute every method in the group the records support, present them side by side with the election provision, and let the employer choose. Never pick the method for them.
 
 ---
 
