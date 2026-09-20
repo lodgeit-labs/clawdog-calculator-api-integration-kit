@@ -1,6 +1,6 @@
 # ClawDog Calculator-API Integration Kit
 
-> Integration kit for the [ClawDog Calculator-Constellation REST API][api] — discover and invoke 20 SBRM-vocabulary calculators (Australian Fringe Benefits Tax, Depreciation) from any HTTP/JSON-RPC client.
+> Integration kit for the [ClawDog Calculator-Constellation REST API][api] — discover and invoke 22 SBRM-vocabulary calculators (Australian Fringe Benefits Tax, Depreciation) from any HTTP/JSON-RPC client.
 
 [api]: https://fbt-calculator-api-8340695160.australia-southeast1.run.app/openapi.json
 
@@ -37,7 +37,7 @@ The Calculator Constellation is the first public-facing surface of that operatin
 
 Both surfaces speak the same input/output schema. Pick whichever fits your stack.
 
-There are 20 calculators in the constellation today. See [`docs/CONTRACT.md`](docs/CONTRACT.md) for the full URN list with statute-of-record citations.
+There are 22 calculators in the constellation today. See [`docs/CONTRACT.md`](docs/CONTRACT.md) for the full URN list with statute-of-record citations.
 
 ---
 
@@ -49,7 +49,7 @@ There are 20 calculators in the constellation today. See [`docs/CONTRACT.md`](do
 curl -s https://fbt-calculator-api-8340695160.australia-southeast1.run.app/v1/calculators | head -200
 ```
 
-You should see a JSON array of 20 calculator descriptors. Each has a `calc_uri` (the URN), a `label`, a `method` slug, a list of `supported_periods` (period URNs are **domain-prefixed**, e.g. `urn:sbrm:period:fbt:fy2026`), an `input_schema_ref` pointer into the OpenAPI spec, and a `jurisdiction` tag.
+You should see a JSON array of 22 calculator descriptors. Each has a `calc_uri` (the URN), a `label`, a `method` slug, a list of `supported_periods` (period URNs are **domain-prefixed**, e.g. `urn:sbrm:period:fbt:fy2026`), an `input_schema_ref` pointer into the OpenAPI spec, and a `jurisdiction` tag.
 
 ### 2. Inspect the contract
 
