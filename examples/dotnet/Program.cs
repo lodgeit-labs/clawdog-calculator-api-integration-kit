@@ -128,14 +128,14 @@ try
 }
 catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode statusCode)
 {
-    Console.WriteLine($"\n⚠ POST returned HTTP {(int)statusCode}.");
-    Console.WriteLine(ex.Message);
-    Console.WriteLine(
-        "\nThis is expected if the FBT Car-Operating-Cost input schema has "
-        + "additional required fields beyond the minimal fixture above. Inspect "
-        + "the OpenAPI schema FBTCarOperatingCostInput in "
+    Console.Error.WriteLine($"\n⚠ POST returned HTTP {(int)statusCode}.");
+    Console.Error.WriteLine(ex.Message);
+    Console.Error.WriteLine(
+        "\nThe calculation failed. Inspect the HTTP error above. "
+        + "For input validation errors, check FBTCarOperatingCostInput in "
         + "../../openapi/clawdog-calculator-api.openapi.json for the full field set."
     );
+    return 1;
 }
 
 // ---- Step 3: Module discovery + ?module= filtering (see DiscoverModules.cs) ----

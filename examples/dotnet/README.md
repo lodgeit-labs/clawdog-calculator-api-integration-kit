@@ -37,6 +37,10 @@ The .NET example mirrors the Python example in [`../python/`](../python/) — sa
 - **Anonymous-type request bodies.** The `fixture` object is an anonymous type that `System.Text.Json` serialises with the camelCase field names the substrate expects. In production code, you would use generated DTOs from the OpenAPI snapshot.
 - **Retry-with-jitter on 5xx.** The `RetryAsync` helper at the bottom of `Program.cs` is a self-contained pattern you can lift into your own integration (or replace with [Polly](https://github.com/App-vNext/Polly) for richer policies).
 - **`JsonNode` for the response.** The example uses dynamic JSON traversal for readability; for production, use generated typed DTOs or `JsonSerializer.Deserialize<YourType>(json)`.
+- **HTTP failure status.** If the invocation returns a 4xx, or a 5xx persists after retries, the example prints diagnostics to stderr and exits with status 1. Module discovery runs only after a successful invocation. Successful requests exit with status 0.
+
+The shared [offline regression tests](../python/README.md#offline-regression-tests)
+exercise both quickstarts against a local HTTP server.
 
 ## Schema notes for the FBT Car-Operating-Cost fixture
 

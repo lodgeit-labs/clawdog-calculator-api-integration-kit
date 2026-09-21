@@ -5,12 +5,12 @@ name: test
 # pre-broken" discipline. Both gates surface inline above the merge button.
 #
 # Gate 1 (hermetic): builds the .NET example, validates the OpenAPI snapshot,
-# imports the Python example without executing the live-substrate call. Catches
+# and tests both quickstarts against a local HTTP server. Catches
 # code drift without depending on Cloud Run availability.
 #
 # Gate 2 (live substrate): runs the Python quickstart against the live PROD
-# Cloud Run URL with retry-with-jitter. Catches contract drift between the
-# pinned snapshot and what production actually serves.
+# Cloud Run URL with retry-with-jitter. Detects failed example invocations;
+# it does not compare the complete live contract with the pinned snapshot.
 
 on:
   push:
@@ -61,6 +61,9 @@ jobs:
           dotnet build --nologo --verbosity minimal
           echo "✅ .NET example builds"
 
+      - name: Quickstart exit-code regression tests (offline)
+        run: python3 -m unittest discover -s tests -v
+
   gate-2-live-substrate:
     name: Gate 2 — live substrate probe
     runs-on: ubuntu-latest
@@ -82,7 +85,7 @@ jobs:
           set -e
           cd examples/python
           # The example handles 5xx with retry-with-jitter internally. If it
-          # exits 0, the live substrate is contract-aligned with our snapshot.
+          # exits 0, discovery and the example invocation succeeded.
           python3 quickstart.py
           echo "✅ Live-substrate probe succeeded"
 

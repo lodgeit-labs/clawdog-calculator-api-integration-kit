@@ -37,7 +37,19 @@ Expected runtime: ~1–4 seconds against a warm production container; up to ~6 s
 - **0–100 percentage scale.** `businessUsePercentage: 65` means 65%, not 6500%. Verify against the OpenAPI schema's `description` field.
 - **Mutually-exclusive inputs.** `acquisitionCost` (chained-DV walk path) and `openingDepreciatedValue` (legacy single-year primitive) are mutually exclusive — supply one, not both. The substrate returns a structured 502 with `error: calculation_failed` if you violate the constraint.
 - **Retry-with-jitter on 5xx.** Three retries with exponential backoff starting at 500 ms with random jitter ∈ [0, attempt_delay].
-- **Graceful failure mode.** If the substrate returns a 4xx (your request is malformed) or 502 (resolver gap, e.g. mutually-exclusive input violation), the example prints the structured detail and exits without crashing.
+- **HTTP failure status.** If the invocation returns a 4xx, or a 5xx persists after retries, the example prints diagnostics to stderr and exits with status 1. Successful requests exit with status 0.
+
+## Offline regression tests
+
+From the repository root, build the .NET example and test both quickstarts:
+
+```bash
+dotnet build examples/dotnet --nologo --verbosity minimal
+python3 -m unittest discover -s tests -v
+```
+
+The tests use a local HTTP server and synthetic responses. They cover success,
+validation errors, non-JSON errors, exhausted retries and recovery after a 503.
 
 ## Next steps
 
