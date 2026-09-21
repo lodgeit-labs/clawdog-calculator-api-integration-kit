@@ -90,13 +90,13 @@ jobs:
         run: |
           set -e
           BASE="https://fbt-calculator-api-8340695160.australia-southeast1.run.app"
-          # 1. Discovery returns 200 + 22 calculators
+          # 1. Discovery returns 200 + 23 calculators
           COUNT=$(curl -s "$BASE/v1/calculators" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
-          if [ "$COUNT" != "22" ]; then
-            echo "❌ Expected 22 calculators, got $COUNT"
+          if [ "$COUNT" != "23" ]; then
+            echo "❌ Expected 23 calculators, got $COUNT"
             exit 1
           fi
-          echo "✅ Discovery returns 22 calculators"
+          echo "✅ Discovery returns 23 calculators"
 
           # 2. OpenAPI spec is reachable and version-stable
           VERSION=$(curl -s "$BASE/openapi.json" | python3 -c "import json,sys; print(json.load(sys.stdin)['info']['version'])")
@@ -110,13 +110,13 @@ jobs:
             # should see the warning and decide when to refresh their pin.
           fi
 
-          # 3. MCP tools/list returns 22 tools
+          # 3. MCP tools/list returns 23 tools
           TOOL_COUNT=$(curl -s -X POST "$BASE/mcp" \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
             | python3 -c "import json,sys; print(len(json.load(sys.stdin)['result']['tools']))")
-          if [ "$TOOL_COUNT" != "22" ]; then
-            echo "❌ Expected 22 MCP tools, got $TOOL_COUNT"
+          if [ "$TOOL_COUNT" != "23" ]; then
+            echo "❌ Expected 23 MCP tools, got $TOOL_COUNT"
             exit 1
           fi
-          echo "✅ MCP tools/list returns 22 tools"
+          echo "✅ MCP tools/list returns 23 tools"
