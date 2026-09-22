@@ -23,6 +23,9 @@ class QuickstartTests(unittest.TestCase):
     def run_quickstarts(self, replies, expected_success):
         for language, command in COMMANDS.items():
             with self.subTest(language=language):
+                # CI builds the example first, so a missing build must fail there.
+                if language == "dotnet" and not Path(command[1]).exists() and not os.environ.get("CI"):
+                    self.skipTest("build examples/dotnet first to test the .NET quickstart")
                 posts = []
 
                 class Handler(BaseHTTPRequestHandler):
