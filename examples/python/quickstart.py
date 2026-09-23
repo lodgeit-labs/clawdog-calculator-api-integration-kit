@@ -154,23 +154,20 @@ def main() -> int:
         if result.get("advisory"):
             print(f"  Advisory block: {result['advisory']}")
     except urllib.error.HTTPError as e:
-        # A schema-mismatch on our fixture is acceptable for a quickstart;
-        # the goal is to demonstrate the wire shape, not enforce the exact
-        # current schema. Surface the error so the partner can see the
-        # validation feedback.
-        print(f"⚠ POST returned HTTP {e.code}.")
+        print(f"⚠ POST returned HTTP {e.code}.", file=sys.stderr)
         try:
             detail = json.loads(e.read())
-            print(json.dumps(detail, indent=2))
+            print(json.dumps(detail, indent=2), file=sys.stderr)
         except Exception:
             pass
         print(
-            "\nThis is expected if the FBT Car-Operating-Cost input schema "
-            "has additional required fields beyond the minimal fixture above. "
-            "Inspect the OpenAPI schema FBTCarOperatingCostInput in "
+            "\nThe calculation failed. Inspect the HTTP error above. "
+            "For input validation errors, check FBTCarOperatingCostInput in "
             "../../openapi/clawdog-calculator-api.openapi.json for the full "
-            "field set."
+            "field set.",
+            file=sys.stderr,
         )
+        return 1
 
     print("\n=== Done ===")
     return 0
