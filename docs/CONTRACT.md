@@ -70,9 +70,16 @@ curl -s https://fbt-calculator-api-8340695160.australia-southeast1.run.app/v1/ca
 - **4xx** — your request is malformed (schema validation, unknown URN, period not supported).
 - **5xx** — substrate-side failure. **502** specifically indicates a resolver-shape mismatch (e.g. the FBT engine bundle did not load); this is structured and not a bare crash, so your retry logic can distinguish it from network noise. See [OPERATIONAL.md](OPERATIONAL.md) § Error semantics.
 
-### 2.3 `POST /v1/calculators/depreciation/audit/{period_uri}`
+### 2.3 `POST /v1/calculators/depreciation/audit/{period_uri}` — RETIRED (D52)
 
-**Purpose:** Specialised invoke for the depreciation-audit calculator. Distinct from §2.2 because the depreciation-audit takes a *list* of assets in a single call rather than one asset per call.
+> **RETIRED (D52).** This route and the `urn:sbrm:calculator:depreciation:audit`
+> URN are retired. The route now returns **HTTP 404**. Depreciation is served
+> by `urn:sbrm:calculator:depreciation:at` (carrying amount at a date) and
+> `urn:sbrm:calculator:depreciation:range` (charge over a date range) via the
+> generic `POST /v1/calculators/{calc_uri}/{period_uri}` route (§2.2). This
+> section is retained for history; do not call it.
+
+**Purpose (historical):** Specialised invoke for the depreciation-audit calculator. Distinct from §2.2 because the depreciation-audit took a *list* of assets in a single call rather than one asset per call.
 
 **Path param:** `period_uri` (URN of the period).
 
@@ -167,9 +174,9 @@ This is the canonical list at pin time. Order matches the live `GET /v1/calculat
 | 17 | `urn:sbrm:calculator:fbt:meal-entertainment-50-50` | FBTAA s.37CA (Division 9A; 50/50 split) | `FBTMealEntertainment5050Input` |
 | 18 | `urn:sbrm:calculator:fbt:meal-entertainment-register-12wk` | FBTAA s.37CB (Division 9A; 12-Week Register) | `FBTMealEntertainmentRegister12WkInput` |
 | 19 | `urn:sbrm:calculator:fbt:car-statutory-formula` | FBTAA s.9 (Statutory Formula; rate-table-fed) | `FBTCarStatutoryFormulaInput` |
-| 20 | `urn:sbrm:calculator:depreciation:audit` | ITAA97 Div 40 (Prime Cost / Diminishing Value) | `DepreciationAuditInput` |
+| 20 | ~~`urn:sbrm:calculator:depreciation:audit`~~ **RETIRED (D52) — route returns 404** | ITAA97 Div 40 (Prime Cost / Diminishing Value) | ~~`DepreciationAuditInput`~~ |
 
-All 20 declare `jurisdiction: AU` at this pin. Period URNs are **domain-prefixed**: the 19 FBT calculators support `urn:sbrm:period:fbt:fy2026`; the depreciation-audit calculator supports `urn:sbrm:period:depreciation:fy2026`. The exact `supported_periods` value per calculator is in the `GET /v1/calculators` discovery response — consume that, do not hard-code the period URN against your local assumption.
+Row 20 (`depreciation:audit`) is **retired (D52)**: the route returns HTTP 404 and the URN is no longer in the live `GET /v1/calculators` discovery response. It is kept here for history. Depreciation is now served by `urn:sbrm:calculator:depreciation:at` and `urn:sbrm:calculator:depreciation:range`. The 19 FBT calculators declare `jurisdiction: AU` and support `urn:sbrm:period:fbt:fy2026`. Always consume the live `GET /v1/calculators` discovery response for the authoritative URN set and each calculator's `supported_periods`; do not hard-code the period URN against your local assumption.
 
 ---
 
