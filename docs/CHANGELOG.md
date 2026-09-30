@@ -6,7 +6,26 @@ The kit's version tracks the kit's *scaffolding* shape; the pinned API version (
 
 ## [Unreleased]
 
-(Nothing yet.)
+### Added
+
+- `gates/gate2_rounding_policy.py` — **Kit Gate 2: rounding-policy assertion.**
+  Discovers the URN list live (asserts count == 23, unchanged) and asserts
+  `manifest.rounding_policy == "lodgeit-rounding-1.0"` on every HTTP 200 across
+  all 23 calculator URNs. Stdlib-only, retry-with-jitter on 5xx, honest about
+  unreachability (STRICT mode in CI). Reports `23/23` explicitly.
+- `gates/README.md` — documents the gate directory + Gate 2 behaviour.
+- `.github/workflows/test.yml` — new `gate-2-rounding-policy` CI job (STRICT,
+  live PROD) + a Gate 1 hermetic compile-check for the gate script. Existing
+  Gate 1 (hermetic) and the live-substrate probe are unchanged; URN counts are
+  unchanged at 23/23.
+
+### Notes
+
+- Wire-verified against live PROD at authoring time: all 23 URNs returned 200
+  and every one carried `manifest.rounding_policy == "lodgeit-rounding-1.0"`.
+  Note `rounding_policy` is an additive field present on the live wire but not
+  yet in the pinned OpenAPI snapshot (`v0.1.0a0`); a future snapshot refresh
+  will capture it.
 
 ## [v0.1.0] — 2026-06-03
 
