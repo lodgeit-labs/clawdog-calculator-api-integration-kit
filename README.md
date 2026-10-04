@@ -19,7 +19,7 @@ This kit gives you:
 1. **A pinned snapshot of the live OpenAPI spec** so you can generate strongly-typed clients (NSwag, Kiota, openapi-python-client, etc.) against a known-good contract.
 2. **Two runnable examples** (C# .NET, Python) that walk the full discover → invoke loop end-to-end against the live production API.
 3. **Wire-level + operational + architectural docs** so you don't have to reverse-engineer the contract from JSON Schema.
-4. **A two-gate CI workflow** that proves both (a) the examples build cleanly and (b) the contract is still byte-aligned with what production actually serves. Use it as a template for your own integration's CI.
+4. **A two-gate CI workflow** that builds and tests the examples offline, then checks discovery and an example invocation against production. It does not compare the complete live OpenAPI contract with the pinned snapshot. Use it as a template for your own integration's CI.
 5. **A direct line back to us** via the issue templates — `integration-question` for "how do I…" and `service-issue` for "I think the substrate is wrong."
 
 This kit does NOT vendor generated clients (they would go stale; the snapshot is the source of truth). It also does NOT give you a wrapper SDK in any language — partner products vary too widely in their HTTP-stack preferences, dependency-injection patterns, and deployment shapes for an opinionated SDK to be useful at this stage. **The kit is documentation + executable proof; the integration code is yours.**
