@@ -1,6 +1,6 @@
 # ClawDog Calculator-API Integration Kit
 
-> Integration kit for the [ClawDog Calculator-Constellation REST API][api] — discover and invoke 22 SBRM-vocabulary calculators (Australian Fringe Benefits Tax, Depreciation) from any HTTP/JSON-RPC client.
+> Integration kit for the [ClawDog Calculator-Constellation REST API][api] — discover and invoke 23 SBRM-vocabulary calculators (Australian Fringe Benefits Tax, Depreciation) from any HTTP/JSON-RPC client.
 
 [api]: https://fbt-calculator-api-8340695160.australia-southeast1.run.app/openapi.json
 
@@ -37,7 +37,7 @@ The Calculator Constellation is the first public-facing surface of that operatin
 
 Both surfaces speak the same input/output schema. Pick whichever fits your stack.
 
-There are 22 calculators in the constellation today. See [`docs/CONTRACT.md`](docs/CONTRACT.md) for the full URN list with statute-of-record citations.
+There are 23 calculators in the constellation today (fbt 19 / div7a 1 / depreciation 2 / hp 1). See [`docs/CONTRACT.md`](docs/CONTRACT.md) for the full URN list with statute-of-record citations.
 
 ---
 

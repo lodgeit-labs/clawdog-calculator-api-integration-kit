@@ -55,6 +55,10 @@ jobs:
         run: |
           python3 -c "import py_compile; py_compile.compile('examples/python/quickstart.py', doraise=True); print('✅ Python example compiles')"
 
+      - name: Gate 2 rounding-policy assertion — syntax check
+        run: |
+          python3 -c "import py_compile; py_compile.compile('gates/gate2_rounding_policy.py', doraise=True); print('✅ Gate 2 rounding-policy assertion compiles')"
+
       - name: .NET example — build
         working-directory: examples/dotnet
         run: |
@@ -93,13 +97,13 @@ jobs:
         run: |
           set -e
           BASE="https://fbt-calculator-api-8340695160.australia-southeast1.run.app"
-          # 1. Discovery returns 200 + 22 calculators
+          # 1. Discovery returns 200 + 23 calculators
           COUNT=$(curl -s "$BASE/v1/calculators" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
-          if [ "$COUNT" != "22" ]; then
-            echo "❌ Expected 22 calculators, got $COUNT"
+          if [ "$COUNT" != "23" ]; then
+            echo "❌ Expected 23 calculators, got $COUNT"
             exit 1
           fi
-          echo "✅ Discovery returns 22 calculators"
+          echo "✅ Discovery returns 23 calculators"
 
           # 2. OpenAPI spec is reachable and version-stable
           VERSION=$(curl -s "$BASE/openapi.json" | python3 -c "import json,sys; print(json.load(sys.stdin)['info']['version'])")
@@ -113,13 +117,43 @@ jobs:
             # should see the warning and decide when to refresh their pin.
           fi
 
-          # 3. MCP tools/list returns 22 tools
+          # 3. MCP tools/list returns 23 tools
           TOOL_COUNT=$(curl -s -X POST "$BASE/mcp" \
             -H 'Content-Type: application/json' \
             -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
             | python3 -c "import json,sys; print(len(json.load(sys.stdin)['result']['tools']))")
-          if [ "$TOOL_COUNT" != "22" ]; then
-            echo "❌ Expected 22 MCP tools, got $TOOL_COUNT"
+          if [ "$TOOL_COUNT" != "23" ]; then
+            echo "❌ Expected 23 MCP tools, got $TOOL_COUNT"
             exit 1
           fi
-          echo "✅ MCP tools/list returns 22 tools"
+          echo "✅ MCP tools/list returns 23 tools"
+
+  gate-2-rounding-policy:
+    name: Gate 2 — rounding-policy assertion (all 23 URNs)
+    runs-on: ubuntu-latest
+    needs: gate-1-hermetic
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Assert manifest.rounding_policy on every 200 across all 23 URNs
+        env:
+          CLAWDOG_CALC_API_URL: https://fbt-calculator-api-8340695160.australia-southeast1.run.app
+          CLAWDOG_CALC_TIMEOUT: '30'
+          CLAWDOG_CALC_RETRIES: '5'
+          # STRICT: a real substrate outage fails this gate rather than green-
+          # washing an unverified invariant. The gate still tolerates transient
+          # 5xx via retry-with-jitter; only an all-URN outage after retries
+          # trips the strict failure.
+          CLAWDOG_GATE_STRICT: '1'
+        run: |
+          set -e
+          # Discovers the URN list live, asserts count == 23 (unchanged), and
+          # asserts manifest.rounding_policy == "lodgeit-rounding-1.0" on every
+          # HTTP 200. Reports 23/23 explicitly. See gates/gate2_rounding_policy.py.
+          python3 gates/gate2_rounding_policy.py
+          echo "✅ Gate 2 rounding-policy invariant held; URN counts unchanged 23/23"
