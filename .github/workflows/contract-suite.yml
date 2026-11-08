@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   contract-suite:
@@ -56,3 +57,20 @@ jobs:
           name: contract-summary
           path: contract-summary.md
           if-no-files-found: warn
+
+      - name: Post the summary as a PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = 'contract-summary.md not produced.';
+            try { body = fs.readFileSync('contract-summary.md', 'utf8'); } catch (e) {}
+            // GitHub comment cap is ~65k chars; truncate defensively.
+            if (body.length > 60000) body = body.slice(0, 60000) + '\n\n_(truncated; full table in the contract-summary artifact)_';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '<!-- contract-suite -->\n' + body,
+            });
