@@ -379,10 +379,19 @@ def probe_a_valid(calc_uri, path, body):
     if not isinstance(manifest, dict):
         problems.append("manifest missing")
     else:
-        for e in manifest.get("rate_table_uris", []):
-            if not all(k in e for k in ("uri", "content_hash", "hash_algorithm")):
-                problems.append("rate_table_uris entry missing uri/content_hash/hash_algorithm")
-                break
+        # rate_table_uris is contract-required: it must be PRESENT and a list.
+        # An empty list is OK (a module may consume no year-dependent rate
+        # nodes); a missing key is a defect. Do NOT .get(key, default) on a
+        # key the contract requires — that silently tolerates its absence.
+        if "rate_table_uris" not in manifest:
+            problems.append("manifest.rate_table_uris missing")
+        elif not isinstance(manifest["rate_table_uris"], list):
+            problems.append("manifest.rate_table_uris not a list")
+        else:
+            for e in manifest["rate_table_uris"]:
+                if not all(k in e for k in ("uri", "content_hash", "hash_algorithm")):
+                    problems.append("rate_table_uris entry missing uri/content_hash/hash_algorithm")
+                    break
         if "rounding_policy" not in manifest:
             problems.append("manifest.rounding_policy missing")
     adv = obj.get("advisory") if isinstance(obj, dict) else None
