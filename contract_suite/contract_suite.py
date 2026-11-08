@@ -375,6 +375,13 @@ def probe_a_valid(calc_uri, path, body):
     bad = non_integer_json_numbers(obj)
     if bad:
         problems.append(f"non-integer JSON numbers at: {', '.join(bad[:5])}")
+    # Collect EVERY independent contract gap so one (a) row names all of its
+    # reasons at once (e.g. HP names both 'advisory.disclaimer missing' and
+    # 'manifest.rate_table_uris missing' — handover step 2). No check short-
+    # circuits the others.
+    adv = obj.get("advisory") if isinstance(obj, dict) else None
+    if not isinstance(adv, dict) or "disclaimer" not in adv:
+        problems.append("advisory.disclaimer missing")
     manifest = obj.get("manifest") if isinstance(obj, dict) else None
     if not isinstance(manifest, dict):
         problems.append("manifest missing")
@@ -394,9 +401,6 @@ def probe_a_valid(calc_uri, path, body):
                     break
         if "rounding_policy" not in manifest:
             problems.append("manifest.rounding_policy missing")
-    adv = obj.get("advisory") if isinstance(obj, dict) else None
-    if not isinstance(adv, dict) or "disclaimer" not in adv:
-        problems.append("advisory.disclaimer missing")
     if problems:
         return p.set("fail", "; ".join(problems))
     return p.set("pass")
