@@ -1,0 +1,51 @@
+{
+  "_comment": "Documented refusals, one per module where one exists. Request bodies are the exact bodies Argon used (argon_constellation_report_2026-11-08.md §3). The expected response is the post-D73 uniform 400 contract: detail.{refusal_class, refusal_payload, engine (= module), message}. Probe (f) asserts that shape; it does NOT assert the pre-D73 captured shapes (which Argon flagged as non-uniform — now fixed by PRs #67/#70).",
+
+  "refusals": [
+    {
+      "module": "fbt",
+      "name": "fbt_year_outside_cohort",
+      "calc_uri": "urn:sbrm:calculator:fbt:car-operating-cost",
+      "period_uri": "urn:sbrm:period:fbt:fy2026",
+      "body": {"businessUsePercentage": 60, "formOfFinance": "owned", "acquisitionCost": 50000, "acquisitionDate": "2005-01-01", "daysHeldInFBTYear": 365},
+      "expect": {"status": 400, "refusal_class": "fbt_year_outside_cohort", "engine": "fbt"},
+      "source": "Argon §3.3 (live 400, engine=fbt)"
+    },
+    {
+      "module": "div7a",
+      "name": "myr_year_not_after_loan_year",
+      "calc_uri": "urn:sbrm:calculator:div7a:at",
+      "period_uri": "urn:sbrm:period:div7a:fy2025",
+      "body": {"amalgamated_base": 70000, "loan_term_years": 7, "loan_origination_date": "2024-06-01", "income_year_start_date": "2023-07-01", "is_first_real_myr_year": true, "repayments": []},
+      "expect": {"status": 400, "refusal_class": "myr_year_not_after_loan_year", "engine": "div7a"},
+      "source": "Argon §3.1 Probe 1"
+    },
+    {
+      "module": "div7a",
+      "name": "myr_year_beyond_loan_term",
+      "calc_uri": "urn:sbrm:calculator:div7a:at",
+      "period_uri": "urn:sbrm:period:div7a:fy2025",
+      "body": {"amalgamated_base": 70000, "loan_term_years": 1, "loan_origination_date": "2022-06-01", "income_year_start_date": "2024-07-01", "is_first_real_myr_year": true, "repayments": []},
+      "expect": {"status": 400, "refusal_class": "myr_year_beyond_loan_term", "engine": "div7a"},
+      "source": "Argon §3.1 Probe 2"
+    },
+    {
+      "module": "depreciation",
+      "name": "pool_asset_out_of_t6_scope",
+      "calc_uri": "urn:sbrm:calculator:depreciation:at",
+      "period_uri": "urn:sbrm:period:depreciation:unscoped",
+      "body": {"basis": "accounting", "asset": {"cost": "10000.00", "acquisition_date": "2023-07-01", "accounting_useful_life_years": 5, "accounting_method": "prime_cost", "pool_type": "low_value"}, "at_date": "2026-03-31"},
+      "expect": {"status": 400, "refusal_class": "pool_asset_out_of_t6_scope", "engine": "depreciation"},
+      "source": "Argon §3.6 (refusal_payload pool_type=low_value)"
+    },
+    {
+      "module": "hp",
+      "name": "unsupported_frequency",
+      "calc_uri": "urn:sbrm:calculator:hp:schedule",
+      "period_uri": "urn:sbrm:period:hp:unscoped",
+      "body": {"amount_financed": "10000.00", "annual_rate_pct": "12.0", "term_regular_instalments": 12, "instalment": "900.00", "timing": "in_arrears", "frequency": "weekly", "begin_date": "2024-01-01", "contract_form": "hire_purchase"},
+      "expect": {"status": 400, "refusal_class": "unsupported_frequency", "engine": "hp"},
+      "source": "Argon §3.6 (frequency=weekly)"
+    }
+  ]
+}
