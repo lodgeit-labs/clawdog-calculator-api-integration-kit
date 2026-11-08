@@ -495,7 +495,13 @@ def probe_e_unknown_period(calc_uri, body):
     p = Probe("e")
     module = period_module(calc_uri)
     bogus = f"urn:sbrm:period:{module}:fy1999"
-    path = invoke_path(calc_uri, bogus)
+    # Always use the GENERIC route so the bogus period is carried in the PATH
+    # and the gateway's period allowlist can 404 it. The convenience routes for
+    # hp (/hp/schedule) and depreciation/div7a (/at/, /range/) either omit the
+    # period from the path (hp) or would not exercise the allowlist the same way;
+    # the generic route is the uniform unknown-period surface.
+    from urllib.parse import quote
+    path = f"/v1/calculators/{quote(calc_uri, safe='')}/{quote(bogus, safe='')}"
     status, obj = request("POST", path, body)
     p.request = {"path": path, "body": body}
     p.response = obj
@@ -600,14 +606,23 @@ def run_mcp(calcs, fixtures, periods, tool_names):
     tools = (obj or {}).get("result", {}).get("tools", []) if isinstance(obj, dict) else []
     top["tools_count"] = len(tools)
     top["tools_count_matches"] = (len(tools) == len(calcs))
-    # map calc_uri -> tool name via the tool's annotations/_meta if present,
-    # else fall back to the provided tool_names map.
+    # map calc_uri -> tool name. The gateway tags each tool with the extension
+    # field `_calc_uri` (and the name is the URN's last two segments joined by
+    # '-', e.g. fbt-car-operating-cost). Use `_calc_uri` first; fall back to the
+    # deterministic slug so the mapping holds even if the extension is dropped.
     name_by_uri = dict(tool_names)
     for t in tools:
-        meta = t.get("_meta") or {}
-        cu = meta.get("calc_uri") or t.get("x-calc-uri")
+        cu = t.get("_calc_uri") or (t.get("_meta") or {}).get("calc_uri") or t.get("x-calc-uri")
         if cu:
             name_by_uri[cu] = t["name"]
+    # slug fallback for any calc_uri still unmapped
+    tool_names_set = {t["name"] for t in tools}
+    for cu in calcs:
+        if cu not in name_by_uri:
+            parts = cu.split(":")
+            slug = f"{parts[-2]}-{parts[-1]}"
+            if slug in tool_names_set:
+                name_by_uri[cu] = slug
     # per-calculator parity: tools/call structuredContent == REST body
     for cu in calcs:
         fx = fixtures.get(cu)
@@ -616,7 +631,9 @@ def run_mcp(calcs, fixtures, periods, tool_names):
             continue
         period = periods.get(cu)
         args = dict(fx["body"])
-        if period and cu not in ("urn:sbrm:calculator:hp:schedule",):
+        # period-scoped tools take period_uri as a tool argument; hp is unscoped
+        # but its tool still accepts the unscoped period URN harmlessly.
+        if period:
             args.setdefault("period_uri", period)
         tname = name_by_uri.get(cu)
         if not tname:
