@@ -161,8 +161,9 @@ def discover():
         raise SystemExit(f"discovery failed: GET /v1/modules -> {status}")
 
     # Map each input schema to its calc_uri via x-calc-uri.
+    all_schemas = spec.get("components", {}).get("schemas", {})
     schemas_by_uri = {}
-    for name, schema in (spec.get("components", {}).get("schemas", {})).items():
+    for name, schema in all_schemas.items():
         cu = schema.get("x-calc-uri")
         if cu:
             schemas_by_uri[cu] = {"name": name, "schema": schema}
@@ -174,7 +175,7 @@ def discover():
             f"count mismatch: /v1/calculators={len(calcs)} vs "
             f"sum(/v1/modules[].calculators)={module_calc_count}"
         )
-    return calcs, schemas_by_uri, modules
+    return calcs, schemas_by_uri, modules, all_schemas
 
 
 # --------------------------------------------------------------------------
@@ -185,16 +186,52 @@ def resolved_input_schema(entry, spec):
     return entry["schema"]
 
 
-def x_money_fields(schema):
+def _prop_is_money(prop):
+    if not isinstance(prop, dict):
+        return False
+    if prop.get("x-money") is True:
+        return True
+    for branch in prop.get("anyOf", []) + prop.get("oneOf", []):
+        if isinstance(branch, dict) and branch.get("x-money") is True:
+            return True
+    return False
+
+
+def _deref(prop, all_schemas):
+    """Resolve a single $ref (direct or inside allOf) to its target schema."""
+    ref = prop.get("$ref")
+    if not ref:
+        for sub in prop.get("allOf", []):
+            if isinstance(sub, dict) and sub.get("$ref"):
+                ref = sub["$ref"]
+                break
+    if ref and ref.startswith("#/components/schemas/"):
+        return all_schemas.get(ref.split("/")[-1])
+    return None
+
+
+def x_money_fields(schema, all_schemas=None, _prefix="", _seen=None):
+    """Return DOTTED paths of every x-money field, walking nested objects and
+    $ref targets (e.g. 'asset.cost'). all_schemas enables $ref resolution."""
+    all_schemas = all_schemas or {}
+    _seen = _seen or set()
     out = []
     for fname, prop in (schema.get("properties", {})).items():
-        if prop.get("x-money") is True:
-            out.append(fname)
-        else:
-            for branch in prop.get("anyOf", []) + prop.get("oneOf", []):
-                if isinstance(branch, dict) and branch.get("x-money") is True:
-                    out.append(fname)
-                    break
+        if not isinstance(prop, dict):
+            continue
+        path = _prefix + fname
+        if _prop_is_money(prop):
+            out.append(path)
+        # nested inline object
+        if prop.get("type") == "object" and prop.get("properties"):
+            out += x_money_fields(prop, all_schemas, path + ".", _seen)
+        # $ref / allOf-$ref target
+        target = _deref(prop, all_schemas)
+        if target is not None:
+            key = id(target)
+            if key not in _seen:
+                _seen = _seen | {key}
+                out += x_money_fields(target, all_schemas, path + ".", _seen)
     return out
 
 
@@ -203,24 +240,32 @@ def required_fields(schema):
 
 
 def mutually_exclusive_pairs(schema):
+    """Return de-duplicated unordered {A,B} pairs. x-mutually-exclusive is a
+    LIST (schema-level: list of pairs; property-level: list of sibling names
+    that are mutually exclusive with this property). A-B and B-A collapse."""
     pairs = []
     xme = schema.get("x-mutually-exclusive")
     if isinstance(xme, list):
         for item in xme:
-            if isinstance(item, list) and len(item) >= 2:
-                pairs.append(item)
-    # property-level x-mutually-exclusive naming the sibling
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                pairs.append([item[0], item[1]])
+    # property-level: value is a LIST of sibling field names.
     for fname, prop in (schema.get("properties", {})).items():
+        if not isinstance(prop, dict):
+            continue
         other = prop.get("x-mutually-exclusive")
         if isinstance(other, str):
             pairs.append([fname, other])
-    # de-dup unordered pairs
+        elif isinstance(other, (list, tuple)):
+            for sib in other:
+                if isinstance(sib, str):
+                    pairs.append([fname, sib])
     seen, uniq = set(), []
-    for p in pairs:
-        key = tuple(sorted(p[:2]))
+    for a, b in pairs:
+        key = tuple(sorted((a, b)))
         if key not in seen:
             seen.add(key)
-            uniq.append(list(p[:2]))
+            uniq.append([a, b])
     return uniq
 
 
@@ -361,28 +406,68 @@ def probe_b_repeat(path, body):
     return p.set("pass")
 
 
-def probe_c_halfcent(calc_uri, path, body, schema):
+def _dotted_get_body(body, dotted):
+    cur = body
+    for part in dotted.split("."):
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        else:
+            return None, False
+    return cur, True
+
+
+def _halfcent_value(current):
+    """Produce a half-cent value KEEPING the field's JSON type, so the probe
+    tests quantisation, not a type error. number 45000 -> 45000.005;
+    string '10000.00' -> '10000.005'."""
+    if isinstance(current, str):
+        # replace the fractional part with a 3-dp half-cent; fall back to append
+        if "." in current:
+            whole = current.split(".")[0]
+        else:
+            whole = current or "0"
+        return f"{whole}.005"
+    # numbers (int or float) -> a non-cent-quantised float
+    base = 0
+    try:
+        base = int(float(current))
+    except (TypeError, ValueError):
+        base = 0
+    return base + 0.005
+
+
+def probe_c_halfcent(calc_uri, path, body, schema, all_schemas):
     p = Probe("c")
-    money = x_money_fields(schema)
+    money = x_money_fields(schema, all_schemas)
     if not money:
         return p.set("na", "no x-money field in schema")
-    field = money[0]
-    bad_body = set_field(body, field, "0.005" if isinstance(body.get(field), str) else 0.005)
-    # if the field value is nested or absent, still set it top-level
+    field = money[0]  # dotted path, e.g. 'asset.cost'
+    current, present = _dotted_get_body(body, field)
+    if not present:
+        # seed the field so the type is well-defined; prefer string for nested
+        # money that the fixture didn't carry, else a number.
+        current = "0.00"
+    bad_value = _halfcent_value(current)
+    bad_body = set_field(body, field, bad_value)
     status, obj = request("POST", path, bad_body)
-    p.request = {"path": path, "body": bad_body}
+    p.request = {"path": path, "body": bad_body, "money_field": field}
     p.response = obj
     if status != 422:
-        return p.set("fail", f"expected 422, got {status}")
+        return p.set("fail", f"expected 422, got {status} (field {field})")
     detail = obj.get("detail") if isinstance(obj, dict) else None
     if not isinstance(detail, list):
         return p.set("fail", "422 detail not a list")
+    expected_loc = ["body"] + field.split(".")
     for e in detail:
         if e.get("type") == "money_not_cent_quantised":
             loc = e.get("loc") or []
-            if loc and loc[0] == "body" and loc[-1] == field:
+            if list(loc) == expected_loc:
                 return p.set("pass")
-            return p.set("fail", f"money_not_cent_quantised loc={loc}, expected ['body',..,'{field}']")
+            # tolerate the engine omitting intermediate object segments but
+            # still require body-prefix + the leaf field name
+            if loc and loc[0] == "body" and loc[-1] == field.split(".")[-1]:
+                return p.set("pass")
+            return p.set("fail", f"money_not_cent_quantised loc={loc}, expected {expected_loc}")
     return p.set("fail", "no money_not_cent_quantised in 422 detail")
 
 
@@ -597,7 +682,7 @@ def main():
     ap.add_argument("--summary", default="contract-summary.md")
     args = ap.parse_args()
 
-    calcs_meta, schemas_by_uri, modules = discover()
+    calcs_meta, schemas_by_uri, modules, all_schemas = discover()
     calc_uris = [c["calc_uri"] for c in calcs_meta]
     period_by_uri = {}
     for c in calcs_meta:
@@ -640,7 +725,7 @@ def main():
                 if not ok:
                     anchor_failures.extend(msgs)
             probes["b"] = probe_b_repeat(path, body)
-            probes["c"] = probe_c_halfcent(cu, path, body, schema)
+            probes["c"] = probe_c_halfcent(cu, path, body, schema, all_schemas)
             probes["d"] = probe_d_missing_required(path, body, schema)
             probes["e"] = probe_e_unknown_period(cu, body)
             probes["g"] = probe_g_mutex(cu, path, body, schema)
