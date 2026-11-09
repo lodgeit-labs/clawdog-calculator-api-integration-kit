@@ -1,0 +1,81 @@
+name: constellation-contract-suite
+
+# Black-box contract suite: discovers every calculator on the live gateway and
+# checks each against the published contract (llms.txt, rounding.html,
+# publish.html). Runs on every PR to the kit, daily, and on manual trigger.
+# No credentials; the base URL defaults to the public gateway and is overridable.
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: ['clawdog/**']
+  schedule:
+    # Daily 06:30 UTC so contract drift surfaces even on idle days.
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Gateway base URL (defaults to public PROD)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  contract-suite:
+    name: Constellation contract suite (live gateway)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run the contract suite against the live gateway
+        env:
+          # workflow_dispatch override wins; otherwise the suite's built-in
+          # default public PROD URL is used.
+          CLAWDOG_CALC_API_URL: ${{ github.event.inputs.base_url }}
+          CLAWDOG_CALC_TIMEOUT: '30'
+          CLAWDOG_CALC_RETRIES: '5'
+          CLAWDOG_CALC_MIN_INTERVAL: '0.3'
+        run: |
+          # Unset the env var when the dispatch input was blank so the suite
+          # falls back to its default public gateway URL.
+          if [ -z "${CLAWDOG_CALC_API_URL}" ]; then unset CLAWDOG_CALC_API_URL; fi
+          python3 contract_suite/contract_suite.py --summary contract-summary.md
+
+      - name: Upload Markdown summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-summary
+          path: contract-summary.md
+          if-no-files-found: warn
+
+      # PR-comment step: only on pull_request events. Scheduled (cron) and
+      # manual (workflow_dispatch) runs have no PR to comment on, so this step
+      # is skipped entirely and never fails the job. The job summary is still
+      # written on every trigger: the suite appends it to $GITHUB_STEP_SUMMARY
+      # and the 'Upload Markdown summary artifact' step runs with if: always().
+      - name: Post the summary as a PR comment
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = 'contract-summary.md not produced.';
+            try { body = fs.readFileSync('contract-summary.md', 'utf8'); } catch (e) {}
+            // GitHub comment cap is ~65k chars; truncate defensively.
+            if (body.length > 60000) body = body.slice(0, 60000) + '\n\n_(truncated; full table in the contract-summary artifact)_';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '<!-- contract-suite -->\n' + body,
+            });

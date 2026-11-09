@@ -1,0 +1,82 @@
+{
+  "_comment": "D-constellation-contract-suite: one minimal valid body per calculator URN. Bodies for the anchored calculators (fbt car-statutory-formula, div7a fy2025/fy2026, depreciation range, hp schedule) are the verified bodies from ClawDog_Share live-examples-2026-11-08/LIVE_EXAMPLES.md so the step-4 independent anchors hold. The other FBT bodies are schema-valid wire-shape demonstrators mirroring the pinned OpenAPI *Input schemas (camelCase aliases). period_uri, where relevant, is resolved live by the suite from GET /v1/calculators; a per-URN override may pin it here.",
+
+  "urn:sbrm:calculator:fbt:car-statutory-formula": {
+    "body": {"baseValue": 45000, "accessories": 5000, "daysAvailable": 365, "employeeContribution": 1200, "fbtType": "Type 1"},
+    "source": "LIVE_EXAMPLES.md #1 (verified live)"
+  },
+  "urn:sbrm:calculator:fbt:car-operating-cost": {
+    "body": {"businessUsePercentage": 65, "formOfFinance": "owned", "fuelRepairsServicing": 8000.0, "registrationInsurance": 2000.0, "daysHeldInFBTYear": 366, "acquisitionCost": 45000.0, "acquisitionDate": "2024-04-01"}
+  },
+  "urn:sbrm:calculator:fbt:loan": {
+    "body": {"interestChargedByEmployer": 100.0, "otherwiseDeductiblePercentage": 0, "originalLoanAmount": 10000.0}
+  },
+  "urn:sbrm:calculator:fbt:debt-waiver": {
+    "body": {"amountWaived": 5000.0}
+  },
+  "urn:sbrm:calculator:fbt:expense-payment": {
+    "body": {"expenseValue": 1000.0, "otherwiseDeductiblePercentage": 0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:expense-payment-in-house": {
+    "body": {"expenseValue": 1000.0, "otherwiseDeductiblePercentage": 0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:property": {
+    "body": {"gstInclusiveValue": 1000.0, "otherwiseDeductiblePercentage": 0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:property-in-house": {
+    "body": {"gstInclusiveValue": 1000.0, "otherwiseDeductiblePercentage": 0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:residual": {
+    "body": {"residualValue": 1000.0, "otherwiseDeductiblePercentage": 0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:residual-in-house": {
+    "body": {"residualValue": 1000.0, "otherwiseDeductiblePercentage": 0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:housing": {
+    "body": {"housingBenefitValue": 10000.0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:lafha": {
+    "body": {"weeksLivedAway": 10, "accommodationPerWeek": 300.0, "mealsPerWeek": 200.0}
+  },
+  "urn:sbrm:calculator:fbt:board": {
+    "body": {"membersOverTwelve": 2, "over12MealsPerChild": 200}
+  },
+  "urn:sbrm:calculator:fbt:tebe": {
+    "body": {"salaryPackagedMealEfle": 1000.0, "recreation": 500.0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:car-parking-actual": {
+    "body": {"spacesProvided": 5, "valuationMethodRate": 20.0}
+  },
+  "urn:sbrm:calculator:fbt:car-parking-statutory-228": {
+    "body": {"daysCarParkingAvailable": 228, "valuationMethodRate": 20.0}
+  },
+  "urn:sbrm:calculator:fbt:car-parking-register-12wk": {
+    "body": {"benefitsInPeriod": 50, "valuationMethodRate": 20.0, "daysSpaceAvailable": 228}
+  },
+  "urn:sbrm:calculator:fbt:meal-entertainment-50-50": {
+    "body": {"employees": 1000.0, "employeesAssociates": 500.0, "employeesNonassociates": 500.0, "fbtType": "Type 2"}
+  },
+  "urn:sbrm:calculator:fbt:meal-entertainment-register-12wk": {
+    "body": {"employees": 1000.0, "employeesAssociates": 500.0, "employeesNonassociates": 500.0, "fbtType": "Type 2", "registerPercentage": 50.0}
+  },
+
+  "urn:sbrm:calculator:div7a:at": {
+    "body": {"amalgamated_base": 70000, "loan_term_years": 7, "loan_origination_date": "2024-06-01", "income_year_start_date": "2024-07-01", "repayments": []},
+    "period_uri": "urn:sbrm:period:div7a:fy2025",
+    "source": "LIVE_EXAMPLES.md #2 (verified live)"
+  },
+
+  "urn:sbrm:calculator:depreciation:at": {
+    "body": {"basis": "accounting", "asset": {"cost": "10000.00", "acquisition_date": "2024-07-01", "accounting_useful_life_years": 5, "accounting_method": "prime_cost"}, "at_date": "2026-03-31"}
+  },
+  "urn:sbrm:calculator:depreciation:range": {
+    "body": {"basis": "accounting", "asset": {"cost": "10000.00", "acquisition_date": "2024-07-01", "accounting_useful_life_years": 5, "accounting_method": "prime_cost"}, "day_count": "actual/actual", "from_date": "2025-07-01", "to_date": "2026-06-30"},
+    "source": "LIVE_EXAMPLES.md #4 (verified live)"
+  },
+
+  "urn:sbrm:calculator:hp:schedule": {
+    "body": {"amount_financed": "273269.35", "annual_rate_pct": "3.84", "term_regular_instalments": 59, "instalment": "4180.02", "timing": "in_arrears", "frequency": "monthly", "begin_date": "2021-08-30", "contract_form": "chattel_mortgage", "balloon": {"amount": "59180.02", "instalment_number": 60, "mode": "replace"}, "fy_end_month": 6},
+    "period_uri": "urn:sbrm:period:hp:unscoped",
+    "source": "hp.html Scania example; totals captured by Argon 7 Nov 2026"
+  }
+}
