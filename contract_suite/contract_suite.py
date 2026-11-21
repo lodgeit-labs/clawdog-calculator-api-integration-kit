@@ -91,8 +91,18 @@ EXTRA_ANCHORS = [
         "name": "div7a FY2026 $70,000 no repayments",
         "calc_uri": "urn:sbrm:calculator:div7a:at",
         "period_uri": "urn:sbrm:period:div7a:fy2026",
-        "body": {**_DIV7A_70K, "repayments": []},
-        "expect": {"statutory_myr": "13615.68", "interest_accrued": "5859.00"},
+        # A loan made in 2024-25, tested in 2025-26: the request shown in the
+        # FY2026 example on lodgeit.org/div7a.html. Origination falls inside
+        # the tested income year, so the term is still 7 years.
+        "body": {
+            "amalgamated_base": 70000,
+            "loan_term_years": 7,
+            "loan_origination_date": "2025-06-01",
+            "income_year_start_date": "2025-07-01",
+            "repayments": [],
+        },
+        "expect": {"statutory_myr": "13615.68", "interest_accrued": "5859.00",
+                   "remaining_term_years": 7},
     },
     {
         "name": "div7a FY2025 one repayment 13801.18 on 2024-12-31",

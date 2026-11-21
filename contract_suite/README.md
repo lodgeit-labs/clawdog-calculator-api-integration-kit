@@ -42,10 +42,13 @@ from a developer host that cannot reach the gateway.
    6000.00; HP Scania totals.interest 32531.91, rounding_residual 0.05. These
    check the valid-call body. `EXTRA_ANCHORS` sends further anchored requests
    (own body, named expected fields; usable by any calculator): Div 7A FY2026
-   MYR 13615.68, interest 5859.00; Div 7A FY2025 one repayment of 13801.18 on
-   2024-12-31 → interest 5535.48, shortfall 0.00, is_complying true; two such
-   repayments (2024-12-31, 2025-06-30) → interest 5532.16. Div 7A interest
-   figures are from the ATO Division 7A calculator and decision tool (21 Nov 2026).
+   (loan made 2024-25, `loan_origination_date` 2025-06-01, tested in 2025-26 —
+   the request in the lodgeit.org/div7a.html FY2026 example) MYR 13615.68,
+   interest 5859.00, remaining_term_years 7; Div 7A FY2025 one repayment of
+   13801.18 on 2024-12-31 → interest 5535.48, shortfall 0.00, is_complying true;
+   two such repayments (2024-12-31, 2025-06-30) → interest 5532.16. Div 7A
+   interest figures are from the ATO Division 7A calculator and decision tool
+   (21 Nov 2026).
 
 ## Etiquette
 
