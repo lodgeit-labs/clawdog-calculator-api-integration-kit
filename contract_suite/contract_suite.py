@@ -92,8 +92,9 @@ EXTRA_ANCHORS = [
         "calc_uri": "urn:sbrm:calculator:div7a:at",
         "period_uri": "urn:sbrm:period:div7a:fy2026",
         # A loan made in 2024-25, tested in 2025-26: the request shown in the
-        # FY2026 example on lodgeit.org/div7a.html. Origination falls inside
-        # the tested income year, so the term is still 7 years.
+        # FY2026 example on lodgeit.org/div7a.html. Origination is in the year
+        # before the tested income year, so 2025-26 is the first repayment year
+        # and 7 years remain.
         "body": {
             "amalgamated_base": 70000,
             "loan_term_years": 7,

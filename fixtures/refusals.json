@@ -16,9 +16,9 @@
       "name": "myr_year_not_after_loan_year",
       "calc_uri": "urn:sbrm:calculator:div7a:at",
       "period_uri": "urn:sbrm:period:div7a:fy2025",
-      "body": {"amalgamated_base": 70000, "loan_term_years": 7, "loan_origination_date": "2024-06-01", "income_year_start_date": "2023-07-01", "is_first_real_myr_year": true, "repayments": []},
+      "body": {"amalgamated_base": 70000, "loan_term_years": 7, "loan_origination_date": "2024-08-01", "income_year_start_date": "2024-07-01", "is_first_real_myr_year": true, "repayments": []},
       "expect": {"status": 400, "refusal_class": "myr_year_not_after_loan_year", "engine": "div7a"},
-      "source": "Argon §3.1 Probe 1"
+      "source": "Argon §3.1 Probe 1 (body re-based into fy2025: loan made inside the tested income year, so income_year_start_date is the period's own 1 July)"
     },
     {
       "module": "div7a",
