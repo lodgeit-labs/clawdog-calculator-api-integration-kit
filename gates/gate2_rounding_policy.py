@@ -205,7 +205,7 @@ def invoke_for(urn, period):
         return _request("POST", f"/v1/calculators/div7a/at/{period}", {
             "amalgamated_base": 100000.0, "loan_term_years": 7,
             "loan_origination_date": "2020-06-01",
-            "income_year_start_date": "2025-07-01",
+            "income_year_start_date": "2024-07-01",
         })
     if urn == "urn:sbrm:calculator:depreciation:at":
         return _request("POST", f"/v1/calculators/depreciation/at/{period}", {
