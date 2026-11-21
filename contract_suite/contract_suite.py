@@ -56,8 +56,14 @@ ANCHORS = {
     "urn:sbrm:calculator:div7a:at": {
         # keyed by period because the same URN is anchored in two years
         "__by_period__": {
-            "urn:sbrm:period:div7a:fy2025": {"statutory_myr": "13801.18"},
-            "urn:sbrm:period:div7a:fy2026": {"statutory_myr": "13615.68"},
+            # ATO Division 7A calculator, run by Andrew 2026-11-21:
+            # $70,000, no repayments, FY2025 (8.77%).
+            "urn:sbrm:period:div7a:fy2025": {
+                "statutory_myr": "13801.18", "interest_accrued": "6139.00"
+            },
+            # FY2026 is NOT reached by the valid call (it only runs in the
+            # calculator's first supported period, fy2025). The FY2026 anchor
+            # lives in EXTRA_ANCHORS below, which sends its own request.
         }
     },
     "urn:sbrm:calculator:depreciation:range": {
@@ -67,6 +73,48 @@ ANCHORS = {
         "totals.interest": "32531.91", "totals.rounding_residual": "0.05"
     },
 }
+
+# Extra anchored requests: an independent input + named expected fields, for
+# cases the single valid call cannot reach (another period, repayments, ...).
+# Any calculator can add entries. Expected values are constants from hand
+# arithmetic / the ATO, never read back from the engine. A str expectation is
+# compared as the decimal string on the wire; a bool/int expectation must match
+# the JSON value and type exactly.
+_DIV7A_70K = {
+    "amalgamated_base": 70000,
+    "loan_term_years": 7,
+    "loan_origination_date": "2024-06-01",
+    "income_year_start_date": "2024-07-01",
+}
+EXTRA_ANCHORS = [
+    {
+        "name": "div7a FY2026 $70,000 no repayments",
+        "calc_uri": "urn:sbrm:calculator:div7a:at",
+        "period_uri": "urn:sbrm:period:div7a:fy2026",
+        "body": {**_DIV7A_70K, "repayments": []},
+        "expect": {"statutory_myr": "13615.68", "interest_accrued": "5859.00"},
+    },
+    {
+        "name": "div7a FY2025 one repayment 13801.18 on 2024-12-31",
+        "calc_uri": "urn:sbrm:calculator:div7a:at",
+        "period_uri": "urn:sbrm:period:div7a:fy2025",
+        "body": {**_DIV7A_70K, "repayments": [
+            {"date": "2024-12-31", "amount": "13801.18"},
+        ]},
+        "expect": {"interest_accrued": "5535.48", "shortfall": "0.00",
+                   "is_complying": True},
+    },
+    {
+        "name": "div7a FY2025 repayments 13801.18 on 2024-12-31 and 2025-06-30",
+        "calc_uri": "urn:sbrm:calculator:div7a:at",
+        "period_uri": "urn:sbrm:period:div7a:fy2025",
+        "body": {**_DIV7A_70K, "repayments": [
+            {"date": "2024-12-31", "amount": "13801.18"},
+            {"date": "2025-06-30", "amount": "13801.18"},
+        ]},
+        "expect": {"interest_accrued": "5532.16"},
+    },
+]
 
 _last_request_ts = 0.0
 
@@ -396,6 +444,9 @@ def probe_a_valid(calc_uri, path, body):
             problems.append("manifest.rate_table_uris not a list")
         else:
             for e in manifest["rate_table_uris"]:
+                if not isinstance(e, dict):
+                    problems.append("rate_table_uris entry not an object")
+                    break
                 if not all(k in e for k in ("uri", "content_hash", "hash_algorithm")):
                     problems.append("rate_table_uris entry missing uri/content_hash/hash_algorithm")
                     break
@@ -694,10 +745,37 @@ def check_anchors(calc_uri, period_uri, body200):
         spec = spec["__by_period__"].get(period_uri, {})
     for field, expected in spec.items():
         got = dotted_get(body200, field)
-        if str(got) != str(expected):
+        if not _anchor_matches(got, expected):
             ok = False
             msgs.append(f"anchor {calc_uri} {field}={got!r} != {expected!r}")
     return ok, msgs
+
+
+def _anchor_matches(got, expected):
+    if isinstance(expected, str):
+        return isinstance(got, (str, int)) and not isinstance(got, bool) \
+            and str(got) == expected
+    return type(got) is type(expected) and got == expected
+
+
+def run_extra_anchors(calc_uris):
+    """Send each EXTRA_ANCHORS request and check its named fields. Returns a
+    list of failure messages, each naming the anchor and field."""
+    msgs = []
+    for a in EXTRA_ANCHORS:
+        if a["calc_uri"] not in calc_uris:
+            msgs.append(f"anchor '{a['name']}': {a['calc_uri']} not discovered")
+            continue
+        path = invoke_path(a["calc_uri"], a["period_uri"])
+        status, obj = request("POST", path, a["body"])
+        if status != 200 or not isinstance(obj, dict):
+            msgs.append(f"anchor '{a['name']}': expected 200, got {status}")
+            continue
+        for field, expected in a["expect"].items():
+            got = dotted_get(obj, field)
+            if not _anchor_matches(got, expected):
+                msgs.append(f"anchor '{a['name']}' {field}={got!r} != {expected!r}")
+    return msgs
 
 
 # --------------------------------------------------------------------------
@@ -762,6 +840,9 @@ def main():
             probes["h"] = probe_h_unknown_field(path, body, schema)
         # (f) refusals handled below; (i) MCP handled below
         rows[cu] = probes
+
+    # extra anchored requests (independent inputs beyond the valid call)
+    anchor_failures.extend(run_extra_anchors(calc_uris))
 
     # (f) refusals — attach to the refusal's calc_uri (first refusal per calc)
     for r in refusals:
@@ -843,7 +924,10 @@ def main():
             lines.append(f"- {m}")
     else:
         lines.append("✓ all independent anchors held "
-                     "(fbt 8603.71; div7a 13801.18 / 13615.68; depreciation "
+                     "(fbt 8603.71; div7a FY2025 MYR 13801.18, interest 6139.00 "
+                     "/ 5535.48 (one repayment; shortfall 0.00, complying) "
+                     "/ 5532.16 (two repayments); div7a FY2026 MYR 13615.68, "
+                     "interest 5859.00; depreciation "
                      "2000.00/8000.00/6000.00; hp 32531.91 / residual 0.05).")
     lines.append("")
 

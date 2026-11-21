@@ -37,9 +37,15 @@ from a developer host that cannot reach the gateway.
    half-cent case gives `isError: true`.
 
 4. **Independent anchors** (assertions from hand arithmetic / the ATO, never the
-   engine): FBT statutory 8603.71; Div 7A FY2025 13801.18, FY2026 13615.68;
-   depreciation `/range` range_dep 2000.00 / opening 8000.00 / closing 6000.00;
-   HP Scania totals.interest 32531.91, rounding_residual 0.05.
+   engine): FBT statutory 8603.71; Div 7A FY2025 MYR 13801.18, interest_accrued
+   6139.00; depreciation `/range` range_dep 2000.00 / opening 8000.00 / closing
+   6000.00; HP Scania totals.interest 32531.91, rounding_residual 0.05. These
+   check the valid-call body. `EXTRA_ANCHORS` sends further anchored requests
+   (own body, named expected fields; usable by any calculator): Div 7A FY2026
+   MYR 13615.68, interest 5859.00; Div 7A FY2025 one repayment of 13801.18 on
+   2024-12-31 → interest 5535.48, shortfall 0.00, is_complying true; two such
+   repayments (2024-12-31, 2025-06-30) → interest 5532.16. Div 7A interest
+   figures are from the ATO Division 7A calculator and decision tool (21 Nov 2026).
 
 ## Etiquette
 
